@@ -5,10 +5,10 @@ import os
 st.set_page_config(page_title="Gemini 2.0 Expert")
 st.title("🤖 Consultas Gemini 2.0 Flash")
 if "GOOGLE_API_KEY" in st.secrets:
-client = genai.Client(api_key=st.secrets["GOOGLE_API_KEY"])
-else:
-st.error("Falta la API Key en Secrets")
-st.stop()
+  client = genai.Client(api_key=st.secrets["GOOGLE_API_KEY"])
+  else:
+  st.error("Falta la API Key en Secrets")
+  st.stop()
 def obtener_texto():
 texto_acumulado = ""
 if os.path.exists("documentos"):
