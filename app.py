@@ -57,24 +57,25 @@ if pregunta := st.chat_input("Haz tu pregunta aquí..."):
 
     # Respuesta de Gemini
     with st.chat_message("assistant"):
-        model = genai.GenerativeModel('gemini-1.5-flash')
-        
-        # El "System Prompt" es lo más importante aquí
-        prompt_final = f"""
-        Eres un asistente oficial y profesional. 
-        Tu conocimiento se limita ESTRICTAMENTE al texto que se te proporciona a continuación.
-        Si la respuesta no está en el texto, responde educadamente que no tienes esa información.
-        
-        CONOCIMIENTO OFICIAL:
-        {contexto_maestro}
-        
-        PREGUNTA DEL USUARIO:
-        {pregunta}
-        """
-        
+        # Intentamos con la versión más reciente y estable
         try:
+            model = genai.GenerativeModel(model_name="gemini-1.5-flash")
+            
+            prompt_final = f"""
+            Eres un asistente oficial. 
+            Usa SOLO este texto: {contexto_maestro}
+            Pregunta: {pregunta}
+            """
+            
             response = model.generate_content(prompt_final)
             st.markdown(response.text)
             st.session_state.messages.append({"role": "assistant", "content": response.text})
+            
         except Exception as e:
-            st.error(f"Error: {e}")
+            # Si falla el anterior, intentamos con la versión Pro por si acaso
+            try:
+                model_alt = genai.GenerativeModel(model_name="gemini-1.5-pro")
+                response = model_alt.generate_content(prompt_final)
+                st.markdown(response.text)
+            except:
+                st.error(f"Lo siento, hay un problema técnico con la API de Google: {e}")
