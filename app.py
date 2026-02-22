@@ -1,26 +1,25 @@
 import streamlit as st
-import google.generativeai as genai
+from google import genai
 from PyPDF2 import PdfReader
 import os
 
 # --- 1. CONFIGURACIÓN DE LA PÁGINA ---
-st.set_page_config(page_title="Asistente Experto", page_icon="📚")
-st.title("🤖 Consultas al Experto")
+st.set_page_config(page_title="Asistente Experto Gemini", page_icon="📚")
+st.title("🤖 Consultas al Experto (v2.0)")
 
-# --- 2. MANEJO DE ERRORES DE CONFIGURACIÓN (Aquí va la seguridad) ---
+# --- 2. CONFIGURACIÓN DEL NUEVO CLIENTE ---
 if "GOOGLE_API_KEY" in st.secrets:
     try:
-        genai.configure(api_key=st.secrets["GOOGLE_API_KEY"])
-        # Definimos el modelo aquí para que esté disponible en toda la app
-        model = genai.GenerativeModel('gemini-1.5-flash')
+        # La nueva forma de conectar con Gemini
+        client = genai.Client(api_key=st.secrets["GOOGLE_API_KEY"])
     except Exception as e:
-        st.error(f"Error al configurar Google AI: {e}")
+        st.error(f"Error al conectar con la nueva API: {e}")
         st.stop()
 else:
-    st.error("⚠️ No se encontró la API Key en los Secrets de Streamlit.")
+    st.error("⚠️ Falta la API Key en los Secrets.")
     st.stop()
 
-# --- 3. CARGA DE DOCUMENTOS (Solo el administrador) ---
+# --- 3. CARGA DE DOCUMENTOS ---
 @st.cache_resource
 def cargar_base_conocimiento():
     texto_total = ""
@@ -31,7 +30,9 @@ def cargar_base_conocimiento():
             try:
                 reader = PdfReader(os.path.join(ruta_docs, archivo))
                 for page in reader.pages:
-                    texto_total += page.extract_text()
+                    texto_página = page.extract_text()
+                    if texto_página:
+                        texto_total += texto_página
             except Exception as e:
                 st.warning(f"No se pudo leer {archivo}: {e}")
     return texto_total
@@ -39,38 +40,35 @@ def cargar_base_conocimiento():
 contexto_maestro = cargar_base_conocimiento()
 
 if not contexto_maestro:
-    st.info("Esperando documentos en la carpeta 'documentos'...")
+    st.info("Sube PDFs a la carpeta 'documentos' en GitHub para comenzar.")
     st.stop()
 
 # --- 4. LÓGICA DEL CHAT ---
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
-# Dibujar mensajes previos
 for message in st.session_state.messages:
     with st.chat_message(message["role"]):
         st.markdown(message["content"])
 
-# Entrada del usuario
-if pregunta := st.chat_input("Haz tu pregunta sobre los documentos:"):
+if pregunta := st.chat_input("Pregúntame algo sobre los documentos:"):
     st.session_state.messages.append({"role": "user", "content": pregunta})
     with st.chat_message("user"):
         st.markdown(pregunta)
 
-    # --- MANEJO DE ERRORES EN LA RESPUESTA ---
     with st.chat_message("assistant"):
         try:
-            # Creamos el prompt con el contexto de tus PDFs
-            prompt_final = f"Usa este texto: {contexto_maestro}. Pregunta: {pregunta}"
+            # Nueva forma de generar contenido
+            prompt_final = f"Usa este texto para responder: {contexto_maestro}. Pregunta: {pregunta}"
             
-            # Llamada limpia a la API
-            response = model.generate_content(prompt_final)
+            response = client.models.generate_content(
+                model="gemini-1.5-flash", 
+                contents=prompt_final
+            )
             
             respuesta_ia = response.text
             st.markdown(respuesta_ia)
             st.session_state.messages.append({"role": "assistant", "content": respuesta_ia})
             
         except Exception as e:
-            # Si el error 404 persiste, aquí te dirá exactamente por qué
-            st.error(f"Error detallado de la API: {e}")
-            st.info("Si ves un error 404, asegúrate de haber actualizado el archivo requirements.txt con google-generativeai==0.8.3")
+            st.error(f"Error con la nueva librería: {e}")
