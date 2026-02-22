@@ -55,27 +55,34 @@ if pregunta := st.chat_input("Haz tu pregunta aquí..."):
     with st.chat_message("user"):
         st.markdown(pregunta)
 
-    # Respuesta de Gemini
+    # Respuesta de Gemini - Versión corregida
     with st.chat_message("assistant"):
-        # Intentamos con la versión más reciente y estable
         try:
-            model = genai.GenerativeModel(model_name="gemini-1.5-flash")
+            # Usamos 'gemini-1.5-flash' a secas, la librería se encarga del resto
+            model = genai.GenerativeModel('gemini-1.5-flash')
             
             prompt_final = f"""
             Eres un asistente oficial. 
-            Usa SOLO este texto: {contexto_maestro}
-            Pregunta: {pregunta}
+            Usa SOLO este texto para responder: {contexto_maestro}
+            
+            Pregunta del usuario: {pregunta}
             """
             
+            # Forzamos la generación
             response = model.generate_content(prompt_final)
-            st.markdown(response.text)
-            st.session_state.messages.append({"role": "assistant", "content": response.text})
             
+            if response.text:
+                st.markdown(response.text)
+                st.session_state.messages.append({"role": "assistant", "content": response.text})
+            else:
+                st.warning("La IA no pudo generar una respuesta clara.")
+                
         except Exception as e:
-            # Si falla el anterior, intentamos con la versión Pro por si acaso
+            # Si el error persiste, intentamos con la versión específica 'latest'
             try:
-                model_alt = genai.GenerativeModel(model_name="gemini-1.5-pro")
+                model_alt = genai.GenerativeModel('gemini-1.5-flash-latest')
                 response = model_alt.generate_content(prompt_final)
                 st.markdown(response.text)
-            except:
-                st.error(f"Lo siento, hay un problema técnico con la API de Google: {e}")
+            except Exception as e_final:
+                st.error(f"Error persistente de API: {e_final}")
+                st.info("💡 Consejo: Revisa que tu API Key sea de 'Google AI Studio' y no de 'Google Cloud Vertex AI', ya que usan librerías distintas.")
