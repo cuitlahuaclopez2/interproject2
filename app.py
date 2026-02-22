@@ -1,33 +1,25 @@
 import streamlit as st
-import os
-
-# Intentar la importación moderna con manejo de error
-try:
-    from google import genai
-except ImportError:
-    st.error("Error de importación: No se encontró la librería 'google-genai'.")
-    st.info("Asegúrate de que 'google-genai' esté en tu requirements.txt y reinicia la app.")
-    st.stop()
-
+from google import genai  # Esta es la nueva forma de importar
 from PyPDF2 import PdfReader
+import os
 
 # --- 1. CONFIGURACIÓN DE LA PÁGINA ---
 st.set_page_config(page_title="Asistente Experto Gemini", page_icon="📚")
 st.title("🤖 Consultas al Experto")
+st.markdown("---")
 
-# --- 2. CONFIGURACIÓN DEL CLIENTE ---
-# Usamos st.secrets para la API Key
+# --- 2. CONFIGURACIÓN DEL CLIENTE (Nueva SDK) ---
 if "GOOGLE_API_KEY" in st.secrets:
     try:
+        # Inicializamos el cliente moderno
         client = genai.Client(api_key=st.secrets["GOOGLE_API_KEY"])
     except Exception as e:
-        st.error(f"Error al inicializar el cliente: {e}")
+        st.error(f"Error al conectar con la API: {e}")
         st.stop()
 else:
-    st.error("⚠️ Falta la API Key en los Secrets de Streamlit.")
+    st.error("⚠️ Configura la 'GOOGLE_API_KEY' en los Secrets de Streamlit.")
     st.stop()
 
-# ... (El resto del código de carga de PDFs y Chat sigue igual) ...
 # --- 3. CARGA DE DOCUMENTOS DESDE CARPETA ---
 @st.cache_resource
 def cargar_conocimiento_local():
@@ -74,7 +66,7 @@ if prompt := st.chat_input("¿En qué puedo ayudarte hoy?"):
             
             # Nueva sintaxis: client.models.generate_content
             response = client.models.generate_content(
-                model="gemini-1.5-flash",
+                model="gemini-2.5-flash",
                 contents=instruccion
             )
             
